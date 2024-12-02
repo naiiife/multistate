@@ -1,9 +1,13 @@
 # Multi-state model solution to the leukemia data
 
-Treatment: transplant modality (MSDT, Haplo-SCT)
+Treatment: transplant modality (MSDT, Haplo-SCT) 
+
 Terminal (primary) event: death
+
 Intermediate event: relapse
+
 Baseline confounders: age, sex, diagnosis, CR
+
 Time-varying confounder: GVHD
 
 ## leukemia_mediation.R
