@@ -6,7 +6,7 @@ Terminal (primary) event: death
 
 Intermediate event: relapse
 
-Baseline confounders: age, sex, diagnosis, CR
+Baseline confounders: age, sex, diagnosis, disease status
 
 Time-varying confounder: GVHD
 
