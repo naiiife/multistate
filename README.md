@@ -18,3 +18,8 @@ This is included in "leukemia_interventional.R" as a special case.
 
 ## leukemia_interventional.R
 Under the separable effects, interventional effects and conditional interventional effects framework, to estimate the counterfactual cumulative indicences (CIFs) and treatment effects (bootstrap uses "leukemia_bootstrap.R").
+
+
+## leukemia_interventional_frailty.R
+Under the separable effects, interventional effects and conditional interventional effects framework, to estimate the counterfactual cumulative indicences (CIFs) and treatment effects, using frailty modeling (bootstrap uses "leukemia_frailty_bootstrap.R").
+
