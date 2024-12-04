@@ -12,8 +12,10 @@ for (bs in 1:B){
   Tg=dat$Tg[ss];Dg=dat$Dg[ss];Tr=dat$Tr[ss]
   Dr=dat$Dr[ss];Td=dat$Td[ss];Dd=dat$Dd[ss]
   
-  fit1 = phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1)
-  fit0 = phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0)
+  fit1 = try(phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1))
+  fit0 = try(phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0))
+  if ('try-error' %in% class(fit1)) next
+  if ('try-error' %in% class(fit0)) next
   sig1 = append(sig1,fit1$sigma)
   sig0 = append(sig0,fit0$sigma)
   
