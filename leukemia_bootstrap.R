@@ -3,8 +3,8 @@ cif1 = cif0 = cif1o = cif0o = cif_spe = cif_cin = cif_int = NULL
 
 for (bs in 1:B){
 cat('Bootstrap round',bs,'of',B,'\n')
-ss1 = sample(which(A==1),replace=TRUE)
-ss0 = sample(which(A==0),replace=TRUE)
+ss1 = sample(which(dat$A==1),replace=TRUE)
+ss0 = sample(which(dat$A==0),replace=TRUE)
 ss = c(ss1,ss0)
 A = dat$A[ss]
 X = as.matrix(dat$X[ss,])
@@ -12,8 +12,9 @@ Tg=dat$Tg[ss];Dg=dat$Dg[ss];Tr=dat$Tr[ss]
 Dr=dat$Dr[ss];Td=dat$Td[ss];Dd=dat$Dd[ss]
 
 # hazard of d
-fit_d = try(phfit_d(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1))
-if ('try-error' %in% fit_d) next
+fit_d = try(phfit_d(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1,
+                par=c(0.216,3.401,-0.114,0.249,0.263,0.015,0.216)))
+if ('try-error' %in% class(fit_d)) next
 Xb = as.numeric(X%*%fit_d$beta)
 delta_g = fit_d$delta_g
 delta_r = fit_d$delta_r
@@ -22,8 +23,9 @@ lam_od1 = sapply(1:l, function(t) lam_d[t]*exp(Xb))
 lam_ogd1 = lam_od1 * exp(delta_g)
 lam_ord1 = lam_od1 * exp(delta_r)
 lam_ogrd1 = lam_orgd1 = lam_od1 * exp(delta_g+delta_r)
-fit_d = try(phfit_d(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0))
-if ('try-error' %in% fit_d) next
+fit_d = try(phfit_d(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0,
+                par=c(1.147,4.087,-0.460,-0.014,0.209,-0.545)))
+if ('try-error' %in% class(fit_d)) next
 Xb = as.numeric(X%*%fit_d$beta)
 delta_g = fit_d$delta_g
 delta_r = fit_d$delta_r
@@ -33,30 +35,34 @@ lam_ogd0 = lam_od0 * exp(delta_g)
 lam_ord0 = lam_od0 * exp(delta_r)
 lam_ogrd0 = lam_orgd0 = lam_od0 * exp(delta_g+delta_r)
 # hazard of g
-fit_g = try(phfit_g(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1))
-if ('try-error' %in% fit_g) next
+fit_g = try(phfit_g(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1,
+                par=c(-0.032,-0.021,-0.010,0.017,0.183)))
+if ('try-error' %in% class(fit_g)) next
 Xb = as.numeric(X%*%fit_g$beta)
 delta_r = fit_g$delta_r
 lam_g = matchy(fit_g$tt, fit_g$lam, tt)
 lam_og1 = sapply(1:l, function(t) lam_g[t]*exp(Xb))
 lam_org1 = lam_og1 *exp(delta_r)
-fit_g = try(phfit_g(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0))
-if ('try-error' %in% fit_g) next
+fit_g = try(phfit_g(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0,
+                par=c(0,0.299,-0.181,1.074,-0.896)))
+if ('try-error' %in% class(fit_g)) next
 Xb = as.numeric(X%*%fit_g$beta)
 delta_r = fit_g$delta_r
 lam_g = matchy(fit_g$tt, fit_g$lam, tt)
 lam_og0 = sapply(1:l, function(t) lam_g[t]*exp(Xb))
 lam_org0 = lam_og0 *exp(delta_r)
 # hazard of r
-fit_r = try(phfit_r(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1))
-if ('try-error' %in% fit_r) next
+fit_r = try(phfit_r(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1,
+                par=c(-0.044,-0.021,-0.139,0.845,0.875)))
+if ('try-error' %in% class(fit_r)) next
 Xb = as.numeric(X%*%fit_r$beta)
 delta_g = fit_r$delta_g
 lam_r = matchy(fit_r$tt, fit_r$lam, tt)
 lam_or1 = sapply(1:l, function(t) lam_r[t]*exp(Xb))
 lam_ogr1 = lam_or1 * exp(delta_g)
-fit_r = try(phfit_r(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0))
-if ('try-error' %in% fit_r) next
+fit_r = try(phfit_r(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0,
+                par=c(0.192,-0.205,-0.200,0.767,-0.029)))
+if ('try-error' %in% class(fit_r)) next
 Xb = as.numeric(X%*%fit_r$beta)
 delta_g = fit_r$delta_g
 lam_r = matchy(fit_r$tt, fit_r$lam, tt)
