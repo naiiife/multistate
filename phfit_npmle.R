@@ -1,5 +1,3 @@
-library(MASS)
-
 phfit_d = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
   Tg = Tg[A==a]
   Tr = Tr[A==a]
@@ -7,7 +5,7 @@ phfit_d = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
   Dg = Dg[A==a]
   Dr = Dr[A==a]
   Dd = Dd[A==a]
-  X = X[A==a,]
+  X = as.matrix(as.matrix(X)[A==a,])
   tt = sort(unique(Td[Dd==1]))
   l = length(tt)
   k = length(Td)
@@ -20,36 +18,22 @@ phfit_d = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
     beta = beta0 = rep(0, p)
     delta_g = delta_r = delta_g0 = delta_r0 = 0
   }
-  Xb = as.numeric(X%*%beta)
-  lam = sapply(tt, function(t) sum(Dd*(Td==t))/sum((Td>=t)*
-                       exp(Xb+(Tg<t)*delta_g+(Tr<t)*delta_r)))
-  lam[is.nan(lam)] = 0
-  while(TRUE){
+  lam = rep(1/l,l)
+  iter = 0
+  while(iter<100){
+    iter = iter+1
     Xb = as.numeric(X%*%beta)
-    Lam = sapply(1:k, function(i) sum((tt<=Td[i])*lam*
-                      exp((tt>Tg[i])*delta_g+(tt>Tr[i])*delta_r)))
-    Lam = Lam * exp(Xb)
-    dbeta = t(X)%*%(Dd-Lam)
-    ddbeta = -t(X)%*%diag(Lam)%*%X
-    #S0 = sapply(Td, function(l) sum((Td>=l)*exp(Xb+delta_g*Dg*(Tg<l)+delta_r*Dr*(Tr<l))))
-    #S1 = sapply(Td, function(l) colSums((Td>=l)*exp(Xb+delta_g*Dg*(Tg<l)+delta_r*Dr*(Tr<l))*X))
-    #S2 = sapply(Td, function(l) t(X)%*%diag((Td>=l)*exp(Xb+delta_g*Dg*(Tg<l)+delta_r*Dr*(Tr<l)))%*%X)
-    #S1 = t(S1)
-    #S2 = t(S2)
-    #dbeta = as.numeric(t(X-S1/S0)%*%Dd)
-    #ddbeta = t(S1/S0)%*%diag(Dd)%*%(S1/S0) - matrix(colSums(Dd*S2/S0),p,p)
-    dddelta_g = - sum(sapply(1:k, function(i) sum((tt<=Td[i])*lam*
-                         (tt>Tg[i])*exp(Xb[i]+delta_g+(tt>Tr[i])*delta_r))))
-    dddelta_r = - sum(sapply(1:k, function(i) sum((tt<=Td[i])*lam*
-                         (tt>Tr[i])*exp(Xb[i]+delta_r+(tt>Tg[i])*delta_g))))
-    ddelta_g = dddelta_g + sum(Dd*(Tg<Td))
-    ddelta_r = dddelta_r + sum(Dd*(Tr<Td))
-    #S1 = sapply(Td, function(l) sum((Td>=l)*exp(Xb+delta_g*Dg*(Tg<l)+delta_r*Dr*(Tr<l))*Dg*(Tg<l)))
-    #ddelta_g = sum(Dd*(Dg-S1/S0))
-    #dddelta_g = sum(Dd*(S1/S0)^2) - sum(Dd*S1/S0^2)
-    #S1 = sapply(Td, function(l) sum((Td>=l)*exp(Xb+delta_g*Dg*(Tg<l)+delta_r*Dr*(Tr<l))*Dr*(Tr<l)))
-    #ddelta_r = sum(Dd*(Dr-S1/S0))
-    #dddelta_r = sum(Dd*(S1/S0)^2) - sum(Dd*S1/S0^2)
+    S0 = sapply(Td, function(l) sum((Td>=l)*exp(Xb+delta_g*Dg*(Tg<l)+delta_r*Dr*(Tr<l))))
+    S1 = t(sapply(Td, function(l) colSums((Td>=l)*exp(Xb+delta_g*Dg*(Tg<l)+delta_r*Dr*(Tr<l))*X)))
+    S2 = t(sapply(Td, function(l) t(X)%*%diag((Td>=l)*exp(Xb+delta_g*Dg*(Tg<l)+delta_r*Dr*(Tr<l)))%*%X))
+    dbeta = as.numeric(t(X-S1/S0)%*%Dd)
+    ddbeta = t(S1/S0)%*%diag(Dd)%*%(S1/S0) - matrix(colSums(Dd*S2/S0),p,p)
+    S1 = sapply(Td, function(l) sum((Td>=l)*exp(Xb+delta_g*Dg*(Tg<l)+delta_r*Dr*(Tr<l))*Dg*(Tg<l)))
+    ddelta_g = sum(Dd*((Td>Tg)*Dg-S1/S0))
+    dddelta_g = sum(Dd*(S1/S0)^2) - sum(Dd*S1/S0)
+    S1 = sapply(Td, function(l) sum((Td>=l)*exp(Xb+delta_g*Dg*(Tg<l)+delta_r*Dr*(Tr<l))*Dr*(Tr<l)))
+    ddelta_r = sum(Dd*((Td>Tr)*Dr-S1/S0))
+    dddelta_r = sum(Dd*(S1/S0)^2) - sum(Dd*S1/S0)
     beta = beta - ginv(ddbeta) %*% dbeta
     if (sum(Dd*(Tg<Td))==0) {
       delta_g = 0
@@ -61,12 +45,14 @@ phfit_d = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
     } else {
       delta_r = delta_r - ddelta_r/dddelta_r
     }
+    delta_g = sign(delta_g)*min(abs(delta_g),4.2)
+    delta_r = sign(delta_r)*min(abs(delta_r),4.2)
     Xb = as.numeric(X%*%beta)
     lam = sapply(tt, function(t) sum(Dd*(Td==t))/sum((Td>=t)*
-                                exp(Xb+(Tg<t)*delta_g+(Tr<t)*delta_r)))
+         exp(Xb+(Tg<t)*delta_g+(Tr<t)*delta_r)))
     lam[is.nan(lam)] = 0
     tol = max(abs(c(beta-beta0,delta_g-delta_g0,delta_r-delta_r0)))
-    #print(c(delta_g,delta_r,beta,tol))
+    #print(c(beta,delta_g,delta_r,tol))
     if (tol<0.00001) break
     beta0 = beta; delta_g0 = delta_g; delta_r0 = delta_r
   }
@@ -80,7 +66,7 @@ phfit_g = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
   Dg = Dg[A==a]
   Dr = Dr[A==a]
   Dd = Dd[A==a]
-  X = X[A==a,]
+  X = as.matrix(as.matrix(X)[A==a,])
   tt = sort(unique(Tg[Dg==1]))
   l = length(tt)
   k = length(Tg)
@@ -92,31 +78,32 @@ phfit_g = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
     beta = beta0 = rep(0, p)
     delta_r = delta_r0 = 0
   }
-  Xb = as.numeric(X%*%beta)
-  lam = sapply(tt, function(t) sum(Dg*(Tg==t))/sum((Tg>=t)*
-                       exp(Xb+(Tr<t)*delta_r)))
-  lam[is.nan(lam)] = 0
-  while(TRUE){
+  lam = rep(1/l,l)
+  iter = 0
+  while(iter<100){
+    iter = iter+1
     Xb = as.numeric(X%*%beta)
-    Lam = sapply(1:k, function(i) sum((tt<=Tg[i])*lam*exp((tt>Tr[i])*delta_r)))
-    Lam = Lam * exp(Xb)
-    dbeta = t(X)%*%(Dg-Lam)
-    ddbeta = -t(X)%*%diag(Lam)%*%X
-    dddelta_r = - sum(sapply(1:k, function(i) sum((tt<=Tg[i])*lam*
-                      (tt>Tr[i])*exp(Xb[i]+delta_r))))
-    ddelta_r = dddelta_r + sum(Dg*(Tr<Tg))
+    S0 = sapply(Tg, function(l) sum((Tg>=l)*exp(Xb+delta_r*Dr*(Tr<l))))
+    S1 = t(sapply(Tg, function(l) colSums((Tg>=l)*exp(Xb+delta_r*Dr*(Tr<l))*X)))
+    S2 = t(sapply(Tg, function(l) t(X)%*%diag((Tg>=l)*exp(Xb+delta_r*Dr*(Tr<l)))%*%X))
+    dbeta = as.numeric(t(X-S1/S0)%*%Dg)
+    ddbeta = t(S1/S0)%*%diag(Dg)%*%(S1/S0) - matrix(colSums(Dg*S2/S0),p,p)
+    S1 = sapply(Tg, function(l) sum((Tg>=l)*exp(Xb+delta_r*Dr*(Tr<l))*Dr*(Tr<l)))
+    ddelta_r = sum(Dg*((Tg>Tr)*Dr-S1/S0))
+    dddelta_r = sum(Dg*(S1/S0)^2) - sum(Dg*S1/S0)
     beta = beta - ginv(ddbeta) %*% dbeta
     if (sum(Dg*(Tr<Tg))==0) {
       delta_r = 0
     } else {
       delta_r = delta_r - ddelta_r/dddelta_r
     }
+    delta_r = sign(delta_r)*min(abs(delta_r),4.2)
     Xb = as.numeric(X%*%beta)
     lam = sapply(tt, function(t) sum(Dg*(Tg==t))/sum((Tg>=t)*
-                               exp(Xb+(Tr<t)*delta_r)))
+                                                       exp(Xb+(Tr<t)*delta_r)))
     lam[is.nan(lam)] = 0
     tol = max(abs(c(beta-beta0,delta_r-delta_r0)))
-    #print(c(delta_r,beta,tol))
+    #print(c(beta,delta_r,tol))
     if (tol<0.00001) break
     beta0 = beta; delta_r0 = delta_r
   }
@@ -130,7 +117,7 @@ phfit_r = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
   Dg = Dg[A==a]
   Dr = Dr[A==a]
   Dd = Dd[A==a]
-  X = X[A==a,]
+  X = as.matrix(as.matrix(X)[A==a,])
   tt = sort(unique(Tr[Dr==1]))
   l = length(tt)
   k = length(Tr)
@@ -142,31 +129,32 @@ phfit_r = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
     beta = beta0 = rep(0, p)
     delta_g = delta_g0 = 0
   }
-  Xb = as.numeric(X%*%beta)
-  lam = sapply(tt, function(t) sum(Dr*(Tr==t))/sum((Tr>=t)*
-                               exp(Xb+(Tg<t)*delta_g)))
-  lam[is.nan(lam)] = 0
-  while(TRUE){
+  lam = rep(1/l,l)
+  iter = 0
+  while(iter<100){
+    iter = iter+1
     Xb = as.numeric(X%*%beta)
-    Lam = sapply(1:k, function(i) sum((tt<=Tr[i])*lam*exp((tt>Tg[i])*delta_g)))
-    Lam = Lam * exp(Xb)
-    dbeta = t(X)%*%(Dr-Lam)
-    ddbeta = -t(X)%*%diag(Lam)%*%X
-    dddelta_g = - sum(sapply(1:k, function(i) sum((tt<=Tr[i])*lam*
-                         (tt>Tg[i])*exp(Xb[i]+delta_g))))
-    ddelta_g = dddelta_g + sum(Dr*(Tg<Tr))
+    S0 = sapply(Tr, function(l) sum((Tr>=l)*exp(Xb+delta_g*Dg*(Tg<l))))
+    S1 = t(sapply(Tr, function(l) colSums((Tr>=l)*exp(Xb+delta_g*Dg*(Tg<l))*X)))
+    S2 = t(sapply(Tr, function(l) t(X)%*%diag((Tr>=l)*exp(Xb+delta_g*Dg*(Tg<l)))%*%X))
+    dbeta = as.numeric(t(X-S1/S0)%*%Dr)
+    ddbeta = t(S1/S0)%*%diag(Dr)%*%(S1/S0) - matrix(colSums(Dr*S2/S0),p,p)
+    S1 = sapply(Tr, function(l) sum((Tr>=l)*exp(Xb+delta_g*Dg*(Tg<l))*Dg*(Tg<l)))
+    ddelta_g = sum(Dr*((Tr>Tg)*Dg-S1/S0))
+    dddelta_g = sum(Dr*(S1/S0)^2) - sum(Dr*S1/S0)
     beta = beta - ginv(ddbeta) %*% dbeta
     if (sum(Dr*(Tg<Tr))==0) {
       delta_g = 0
     } else {
       delta_g = delta_g - ddelta_g/dddelta_g
     }
+    delta_g = sign(delta_g)*min(abs(delta_g),4.2)
     Xb = as.numeric(X%*%beta)
     lam = sapply(tt, function(t) sum(Dr*(Tr==t))/sum((Tr>=t)*
                                                        exp(Xb+(Tg<t)*delta_g)))
     lam[is.nan(lam)] = 0
     tol = max(abs(c(beta-beta0,delta_g-delta_g0)))
-    #print(c(delta_g,beta,tol))
+    #print(c(beta,delta_g,tol))
     if (tol<0.00001) break
     beta0 = beta; delta_g0 = delta_g
   }
@@ -176,7 +164,7 @@ phfit_r = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
 phfit_c = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
   Td = Td[A==a]
   Dd = Dd[A==a]
-  X = X[A==a,]
+  X = as.matrix(as.matrix(X)[A==a,])
   Tc = Td
   Dc = 1 - Dd
   tt = sort(unique(Td[Dd==0]))
@@ -191,21 +179,23 @@ phfit_c = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
   if (!is.null(par)){
     beta = beta0 = par
   }
-  Xb = as.numeric(X%*%beta)
-  lam = sapply(tt, function(t) sum(Dc*(Tc==t))/sum((Tc>=t)*exp(Xb)))
-  lam[is.nan(lam)] = 0
-  while(TRUE){
+  lam = rep(1/l,l)
+  iter = 0
+  while(iter<100){
+    iter = iter+1
     if (!is.null(X)) {
       Xb = as.numeric(X%*%beta)
     } else {
       Xb = 1
     }
-    Lam = sapply(1:k, function(i) sum((tt<=Tc[i])*lam)) * exp(Xb)
     if (!is.null(X)) {
-    dbeta = t(X)%*%(Dc-Lam)
-    ddbeta = -t(X)%*%diag(Lam)%*%X
-    beta = beta - ginv(ddbeta) %*% dbeta
-    Xb = as.numeric(X%*%beta)
+      S0 = sapply(Tc, function(l) sum((Tc>=l)*exp(Xb)))
+      S1 = t(sapply(Tc, function(l) colSums((Tc>=l)*exp(Xb)*X)))
+      S2 = t(sapply(Tc, function(l) t(X)%*%diag((Tc>=l)*exp(Xb))%*%X))
+      dbeta = as.numeric(t(X-S1/S0)%*%Dc)
+      ddbeta = t(S1/S0)%*%diag(Dc)%*%(S1/S0) - matrix(colSums(Dc*S2/S0),p,p)
+      beta = beta - ginv(ddbeta) %*% dbeta
+      Xb = as.numeric(X%*%beta)
     }
     lam = sapply(tt, function(t) sum(Dc*(Tc==t))/sum((Tc>=t)*exp(Xb)))
     lam[is.nan(lam)] = 0
