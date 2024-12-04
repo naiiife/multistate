@@ -1,5 +1,5 @@
 
-source('phfit.R')
+source('phfit_npmle.R')
 dat = read.csv('leukemia.csv')
 dat = transform(dat, MRD=as.numeric(MRDPRET>0), SEX=SEX1-1,
                 CR=DISEASESTATUS-1, DIAGNOSIS=TALLORBALL-1,
