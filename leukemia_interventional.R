@@ -1,5 +1,5 @@
 setwd('D:/Papers/Multistate/codes/')
-source('phfit.R')
+source('phfit_npmle.R')
 dat = read.csv('leukemia.csv')
 dat = transform(dat, MRD=as.numeric(MRDPRET>0), SEX=SEX1-1,
                 CR=DISEASESTATUS-1, DIAGNOSIS=TALLORBALL-1,
@@ -28,20 +28,16 @@ dat$A = A
 X = dat[,c('AGE','SEX','CR','DIAGNOSIS')]
 dat$X = X
 X = as.matrix(X)
+X[,1] = (X[,1]-mean(X[,1]))/sd(X[,1])
+dat$X = X
 p = ncol(X)
 tt = sort(unique(c(Td,Tr,Tg)))
 l = length(tt)
 
-matchy = function(x,y,newx){
-  newy = sapply(newx, function(t) y[which(x==t)])
-  newy = as.numeric(newy)
-  newy[is.na(newy)] = 0
-  return(newy)
-}
-
 
 # hazard of d
-fit_d = phfit_d(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1)
+fit_d = phfit_d(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1,
+                par=c(0.216,3.401,-0.114,0.249,0.263,0.015,0.216))
 Xb = as.numeric(X%*%fit_d$beta)
 delta_g = fit_d$delta_g
 delta_r = fit_d$delta_r
@@ -50,7 +46,8 @@ lam_od1 = sapply(1:l, function(t) lam_d[t]*exp(Xb))
 lam_ogd1 = lam_od1 * exp(delta_g)
 lam_ord1 = lam_od1 * exp(delta_r)
 lam_ogrd1 = lam_orgd1 = lam_od1 * exp(delta_g+delta_r)
-fit_d = phfit_d(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0)
+fit_d = phfit_d(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0,
+                par=c(1.147,4.087,-0.460,-0.014,0.209,-0.545))
 Xb = as.numeric(X%*%fit_d$beta)
 delta_g = fit_d$delta_g
 delta_r = fit_d$delta_r
@@ -60,37 +57,41 @@ lam_ogd0 = lam_od0 * exp(delta_g)
 lam_ord0 = lam_od0 * exp(delta_r)
 lam_ogrd0 = lam_orgd0 = lam_od0 * exp(delta_g+delta_r)
 # hazard of g
-fit_g = phfit_g(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1)
+fit_g = phfit_g(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1,
+                par=c(-0.032,-0.021,-0.010,0.017,0.183))
 Xb = as.numeric(X%*%fit_g$beta)
 delta_r = fit_g$delta_r
 lam_g = matchy(fit_g$tt, fit_g$lam, tt)
 lam_og1 = sapply(1:l, function(t) lam_g[t]*exp(Xb))
 lam_org1 = lam_og1 *exp(delta_r)
-fit_g = phfit_g(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0)
+fit_g = phfit_g(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0,
+                par=c(0,0.299,-0.181,1.074,-0.896))
 Xb = as.numeric(X%*%fit_g$beta)
 delta_r = fit_g$delta_r
 lam_g = matchy(fit_g$tt, fit_g$lam, tt)
 lam_og0 = sapply(1:l, function(t) lam_g[t]*exp(Xb))
 lam_org0 = lam_og0 *exp(delta_r)
 # hazard of r
-fit_r = phfit_r(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1)
+fit_r = phfit_r(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1,
+                par=c(-0.044,-0.021,-0.139,0.845,0.875))
 Xb = as.numeric(X%*%fit_r$beta)
 delta_g = fit_r$delta_g
 lam_r = matchy(fit_r$tt, fit_r$lam, tt)
 lam_or1 = sapply(1:l, function(t) lam_r[t]*exp(Xb))
 lam_ogr1 = lam_or1 * exp(delta_g)
-fit_r = phfit_r(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0)
+fit_r = phfit_r(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0,
+                par=c(0.192,-0.205,-0.200,0.767,-0.029))
 Xb = as.numeric(X%*%fit_r$beta)
 delta_g = fit_r$delta_g
 lam_r = matchy(fit_r$tt, fit_r$lam, tt)
 lam_or0 = sapply(1:l, function(t) lam_r[t]*exp(Xb))
 lam_ogr0 = lam_or0 * exp(delta_g)
 # hazard of c
-fit_c = phfit_c(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1)
+fit_c = phfit_c(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1,par=c(-0.038,0.112,-0.148,-0.082))
 Xb = as.numeric(X%*%fit_c$beta)
 lam_c = matchy(fit_c$tt, fit_c$lam, tt)
 lam_c1 = sapply(1:l, function(t) lam_c[t]*exp(Xb))
-fit_c = phfit_c(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0)
+fit_c = phfit_c(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0,par=c(-0.081,0.699,0.316,0.011))
 Xb = as.numeric(X%*%fit_c$beta)
 lam_c = matchy(fit_c$tt, fit_c$lam, tt)
 lam_c0 = sapply(1:l, function(t) lam_c[t]*exp(Xb))
@@ -406,7 +407,7 @@ dF_ogrd_a = dF_ogr__a*lam_ogrd_a
 F_ogrd_a = t(apply(dF_ogrd_a, 1, cumsum))
 Fd_int = colMeans(F_od_a + F_ogd_a + F_ord_a + F_ogrd_a + F_orgd_a)
 
-B = 500
+B = 200
 source('leukemia_bootstrap.R')
 
 index = which(tt<=2500)
