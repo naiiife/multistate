@@ -4,7 +4,7 @@ quad = gauss.quad(ngrid, "hermite")
 b_list = quad$nodes
 w_list = quad$weights
 
-phfit = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
+phfit = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL,se=FALSE){
   Tg = Tg[A==a]
   Tr = Tr[A==a]
   Td = Td[A==a]
@@ -26,7 +26,6 @@ phfit = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
     Xbd = as.numeric(X%*%betad)
     Xbg = as.numeric(X%*%betag)
     Xbr = as.numeric(X%*%betar)
-    # E step
     Ee0 = Ee1 = Ee2 = 0
     for (b in 1:ngrid){
       e = sqrt(2*sigma)*b_list[b]
@@ -44,7 +43,8 @@ phfit = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
       Ee1 = Ee1 + lik*e*e
       Ee2 = Ee2 + lik*exp(e)
     }
-    sigma = min(mean(Ee1/Ee0),40); Eee = Ee2/Ee0
+    sigma = min(mean(Ee1/Ee0),40)
+    Eee = Ee2/Ee0
     # d
     S0 = sapply(Td, function(l) sum((Td>=l)*Eee*exp(Xbd+delta_gd*(Tg<l)+delta_rd*(Tr<l))))
     S1 = t(sapply(Td, function(l) colSums((Td>=l)*Eee*exp(Xbd+delta_gd*(Tg<l)+delta_rd*(Tr<l))*X)))
@@ -119,11 +119,97 @@ phfit = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
     #print(c(delta_gd,delta_rd,sigma,tol))
     if (tol<0.0001) break
   }
+  if (se){
+    lamd0 = lamd
+    lamg0 = lamg
+    lamr0 = lamr
+    Xbd = as.numeric(X%*%betad)
+    Xbg = as.numeric(X%*%betag)
+    Xbr = as.numeric(X%*%betar)
+    Ee0 = 0
+    for (b in 1:ngrid){
+      e = sqrt(2*sigma)*b_list[b]
+      Lamd = sapply(1:k, function(i) sum(lamd*(tt<=Td[i])*exp(e+Xbd[i]+delta_gd*(Tg[i]<tt)+delta_rd*(Tr[i]<tt))))
+      dlamd = sapply(1:k, function(i) sum(lamd*(tt==Td[i])*exp(e+Xbd[i]+delta_gd*(Tg[i]<tt)+delta_rd*(Tr[i]<tt))))
+      Lamg = sapply(1:k, function(i) sum(lamg*(tt<=Tg[i])*exp(e+Xbg[i]+delta_rg*(Tr[i]<tt))))
+      dlamg = sapply(1:k, function(i) sum(lamg*(tt==Tg[i])*exp(e+Xbg[i]+delta_rg*(Tr[i]<tt))))
+      Lamr = sapply(1:k, function(i) sum(lamr*(tt<=Tr[i])*exp(e+Xbr[i]+delta_gr*(Tg[i]<tt))))
+      dlamr = sapply(1:k, function(i) sum(lamr*(tt==Tr[i])*exp(e+Xbr[i]+delta_gr*(Tg[i]<tt))))
+      dLamd = Dd*log(dlamd); dLamd[dlamd==0] = 0
+      dLamg = Dg*log(dlamg); dLamg[dlamg==0] = 0
+      dLamr = Dr*log(dlamr); dLamr[dlamr==0] = 0
+      lik = exp(-Lamd+dLamd-Lamg+dLamg-Lamr+dLamr)*w_list[b]
+      Ee0 = Ee0 + lik
+    }
+    loglik0 = log(Ee0)
+    loglik = NULL
+    for (q in 1:length(est)){
+      est1 = est
+      est1[q] = est[q] + 1/sqrt(k)
+      betad = est1[1:p]
+      betag = est1[p+(1:p)]
+      betar = est1[2*p+(1:p)]
+      delta_gd = est1[3*p+1]
+      delta_rd = est1[3*p+2]
+      delta_gr = est1[3*p+3]
+      delta_rg = est1[3*p+4]
+      sigma = est1[3*p+5]
+      Xbd = as.numeric(X%*%betad)
+      Xbg = as.numeric(X%*%betag)
+      Xbr = as.numeric(X%*%betar)
+      lamd = lamd0
+      lamg = lamg0
+      lamr = lamr0
+      for (iterh in 1:2){
+      Ee0 = 0; Ee2 = 0
+      for (b in 1:ngrid){
+        e = sqrt(2*sigma)*b_list[b]
+        lamd = sapply(tt, function(t) sum(Dd*(Td==t))/sum((Td>=t)*
+                          Eee*exp(Xbd+(Tg<t)*delta_gd+(Tr<t)*delta_rd)))
+        lamd[is.nan(lamd)] = 0
+        lamg = sapply(tt, function(t) sum(Dg*(Tg==t))/sum((Tg>=t)*
+                          Eee*exp(Xbg+(Tr<t)*delta_rg)))
+        lamg[is.nan(lamg)] = 0
+        lamr = sapply(tt, function(t) sum(Dr*(Tr==t))/sum((Tr>=t)*
+                          Eee*exp(Xbr+(Tg<t)*delta_gr)))
+        lamr[is.nan(lamr)] = 0
+        Lamd = sapply(1:k, function(i) sum(lamd*(tt<=Td[i])*exp(e+Xbd[i]+delta_gd*(Tg[i]<tt)+delta_rd*(Tr[i]<tt))))
+        dlamd = sapply(1:k, function(i) sum(lamd*(tt==Td[i])*exp(e+Xbd[i]+delta_gd*(Tg[i]<tt)+delta_rd*(Tr[i]<tt))))
+        Lamg = sapply(1:k, function(i) sum(lamg*(tt<=Tg[i])*exp(e+Xbg[i]+delta_rg*(Tr[i]<tt))))
+        dlamg = sapply(1:k, function(i) sum(lamg*(tt==Tg[i])*exp(e+Xbg[i]+delta_rg*(Tr[i]<tt))))
+        Lamr = sapply(1:k, function(i) sum(lamr*(tt<=Tr[i])*exp(e+Xbr[i]+delta_gr*(Tg[i]<tt))))
+        dlamr = sapply(1:k, function(i) sum(lamr*(tt==Tr[i])*exp(e+Xbr[i]+delta_gr*(Tg[i]<tt))))
+        dLamd = Dd*log(dlamd); dLamd[dlamd==0] = 0
+        dLamg = Dg*log(dlamg); dLamg[dlamg==0] = 0
+        dLamr = Dr*log(dlamr); dLamr[dlamr==0] = 0
+        lik = exp(-Lamd+dLamd-Lamg+dLamg-Lamr+dLamr)*w_list[b]
+        Ee0 = Ee0 + lik
+        Ee2 = Ee2 + lik*exp(e)
+      }
+      Eee = Ee2/Ee0
+      }
+      loglik = cbind(loglik,log(Ee0))
+    }
+    dloglik = (loglik-loglik0)/(1/sqrt(k))
+    V = ginv(t(dloglik)%*%dloglik)
+    se = sqrt(diag(V))
+    lamd = lamd0
+    lamg = lamg0
+    lamr = lamr0
+  }
+  betad = est[1:p]
+  betag = est[p+(1:p)]
+  betar = est[2*p+(1:p)]
+  delta_gd = est[3*p+1]
+  delta_rd = est[3*p+2]
+  delta_gr = est[3*p+3]
+  delta_rg = est[3*p+4]
+  sigma = est[3*p+5]
   return(list(betad=betad,betag=betag,betar=betar,
               delta_gd=delta_gd,delta_rd=delta_rd,
               delta_gr=delta_gr,delta_rg=delta_rg,
               tt=tt,lamd=lamd,lamg=lamg,lamr=lamr,
-              sigma=sigma,iter=iter))
+              sigma=sigma,iter=iter,se=se))
 }
 
 matchy = function(x,y,newx,exact=TRUE){

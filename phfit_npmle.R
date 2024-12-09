@@ -1,3 +1,5 @@
+## NPMLE
+
 phfit_d = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
   Tg = Tg[A==a]
   Tr = Tr[A==a]
@@ -205,6 +207,27 @@ phfit_c = function(Tg,Dg,Tr,Dr,Td,Dd,A,X,a,par=NULL){
     beta0 = beta
   }
   return(list(beta=beta,tt=tt,lam=lam))
+}
+
+
+testcif <- function(fit1,fit0,maxt=NULL){
+  tt = fit1$tt
+  F1 = colMeans(fit1$Feff, na.rm=TRUE)
+  F0 = colMeans(fit0$Feff, na.rm=TRUE)
+  IF1 = fit1$EIF
+  IF0 = fit0$EIF
+  Ti = rep(TRUE, length(tt))
+  if (!is.null(maxt)) Ti = (tt<=maxt)
+  Tt = sum((F1*(1-F1)-F0*(1-F0))*diff(c(0,tt))*Ti)
+  IFt = colSums(((1-2*F1)*t(IF1)-(1-2*F0)*t(IF0))*diff(c(0,tt))*Ti)
+  Vt = sd(IFt, na.rm=TRUE)/sqrt(nrow(IF1))
+  p1 = 2*pnorm(-abs(Tt/Vt))
+  Tt = sum((F1-F0)*diff(c(0,F1+F0))*Ti)
+  V1 = colSums(t(IF1-IF0)*diff(c(0,F1+F0))*Ti)
+  V2 = colSums((F1-F0)*apply(cbind(0,IF1+IF0),1,diff)*Ti)
+  Vt = sd(V1+V2)/sqrt(nrow(IF1))
+  p2 = 2*pnorm(-abs(Tt/Vt))
+  return(list(p1=p1,p2=p2))
 }
 
 matchy = function(x,y,newx,exact=TRUE){

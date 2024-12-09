@@ -1,6 +1,7 @@
 set.seed(2024)
 cif1 = cif0 = cif1o = cif0o = cif_spe = cif_cin = cif_int = NULL
 sig1 = sig0 = NULL
+delta1 = delta0 = NULL
 
 for (bs in 1:B){
   cat('Bootstrap round',bs,'of',B,'\n')
@@ -13,11 +14,13 @@ for (bs in 1:B){
   Dr=dat$Dr[ss];Td=dat$Td[ss];Dd=dat$Dd[ss]
   
   fit1 = try(phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1))
-  fit0 = try(phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0))
   if ('try-error' %in% class(fit1)) next
+  fit0 = try(phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0))
   if ('try-error' %in% class(fit0)) next
   sig1 = append(sig1,fit1$sigma)
   sig0 = append(sig0,fit0$sigma)
+  delta1 = rbind(delta1,c(fit1$delta_gd,fit1$delta_rd,fit1$delta_gr,fit1$delta_rg))
+  delta0 = rbind(delta0,c(fit0$delta_gd,fit0$delta_rd,fit0$delta_gr,fit0$delta_rg))
   
   F_1.b = F_0.b = F_1o.b = F_0o.b = Fd_spe.b = Fd_int.b = Fd_cin.b = 0
   for (b in 1:ngrid){

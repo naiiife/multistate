@@ -1,6 +1,6 @@
 ## With frailty
 
-setwd('...')
+setwd('D:/Papers/Multistate/codes/')
 source('phfit_frailty.R')
 dat = read.csv('leukemia.csv')
 dat = transform(dat, MRD=as.numeric(MRDPRET>0), SEX=SEX1-1,
@@ -38,8 +38,8 @@ l = length(tt)
 
 
 # estimate hazard
-fit1 = phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1)
-fit0 = phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0)
+fit1 = phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1,se=TRUE)
+fit0 = phfit(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0,se=TRUE)
 
 F_1 = F_0 = F_1o = F_0o = Fd_spe = Fd_int = Fd_cin = 0
 for (b in 1:ngrid){
@@ -387,8 +387,12 @@ Fd_int = Fd_int + colMeans(F_od_a + F_ogd_a + F_ord_a + F_ogrd_a + F_orgd_a)*w_l
 B = 200
 source('leukemia_frailty_bootstrap.R')
 
-se.sig1 = sd(sig1)
-se.sig0 = sd(sig0)
+se.sig1 = sd(sig1); se.sig0 = sd(sig0)
+quantile(sig1,c(.025,.975)); quantile(sig0,c(.025,.975))
+quantile(exp(delta1[,1]),c(.025,.975)); quantile(exp(delta1[,2]),c(.025,.975))
+quantile(exp(delta1[,3]),c(.025,.975)); quantile(exp(delta1[,4]),c(.025,.975))
+quantile(exp(delta0[,1]),c(.025,.975)); quantile(exp(delta0[,2]),c(.025,.975))
+quantile(exp(delta0[,3]),c(.025,.975)); quantile(exp(delta0[,4]),c(.025,.975))
 
 index = which(tt<=2500)
 tti = tt[index]

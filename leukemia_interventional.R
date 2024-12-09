@@ -1,4 +1,4 @@
-setwd('...')
+setwd('D:/Papers/Multistate/codes/')
 source('phfit_npmle.R')
 dat = read.csv('leukemia.csv')
 dat = transform(dat, MRD=as.numeric(MRDPRET>0), SEX=SEX1-1,
@@ -86,21 +86,6 @@ delta_g = fit_r$delta_g
 lam_r = matchy(fit_r$tt, fit_r$lam, tt)
 lam_or0 = sapply(1:l, function(t) lam_r[t]*exp(Xb))
 lam_ogr0 = lam_or0 * exp(delta_g)
-# hazard of c
-fit_c = phfit_c(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=1,par=c(-0.038,0.112,-0.148,-0.082))
-Xb = as.numeric(X%*%fit_c$beta)
-lam_c = matchy(fit_c$tt, fit_c$lam, tt)
-lam_c1 = sapply(1:l, function(t) lam_c[t]*exp(Xb))
-fit_c = phfit_c(Tg,Dg,Tr,Dr,Td,Dd,A,X,a=0,par=c(-0.081,0.699,0.316,0.011))
-Xb = as.numeric(X%*%fit_c$beta)
-lam_c = matchy(fit_c$tt, fit_c$lam, tt)
-lam_c0 = sapply(1:l, function(t) lam_c[t]*exp(Xb))
-
-fit = glm(A~X, family='binomial')
-ps = matrix(1,nrow=n,ncol=2)
-pscore = predict(fit, type='response')
-ps[,1] = (1 - pscore) #* mean((1-A)/(1-pscore))
-ps[,2] = pscore #* mean(A/pscore)
 
 # observable incidence
 lam_og_A = A*lam_og1 + (1-A)*lam_og0
@@ -117,9 +102,6 @@ Lam_og_A = t(apply(lam_ogd_A+lam_ogr_A, 1, cumsum))
 Lam_or_A = t(apply(lam_ord_A+lam_org_A, 1, cumsum))
 Lam_ogr_A = t(apply(lam_ogrd_A, 1, cumsum))
 Lam_org_A = t(apply(lam_orgd_A, 1, cumsum))
-lam_c_A = A*lam_c1 + (1-A)*lam_c0
-Lam_c_A = t(apply(lam_c_A, 1, cumsum))
-SC = 1 - t(apply(exp(-Lam_c_A)*lam_c_A, 1, cumsum))
 
 dF_or_A = exp(-Lam_o_A)*lam_or_A
 dF_og_A = exp(-Lam_o_A)*lam_og_A
@@ -409,6 +391,10 @@ Fd_int = colMeans(F_od_a + F_ogd_a + F_ord_a + F_ogrd_a + F_orgd_a)
 
 B = 200
 source('leukemia_bootstrap.R')
+
+quantile(exp(delta1[,2]),c(.025,.975))
+quantile(exp(delta1[,4]),c(.025,.975))
+quantile(exp(delta1[,1]),c(.025,.975))
 
 index = which(tt<=2500)
 tti = tt[index]
