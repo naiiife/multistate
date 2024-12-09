@@ -1,4 +1,3 @@
-setwd('D:/Papers/Multistate/codes/')
 source('phfit_npmle.R')
 dat = read.csv('leukemia.csv')
 dat = transform(dat, MRD=as.numeric(MRDPRET>0), SEX=SEX1-1,
